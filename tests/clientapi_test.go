@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"gxchain-adapter/api"
+	"gxclient-go/keypair"
 	gxcTypes "gxclient-go/types"
 	"testing"
 )
@@ -12,6 +13,7 @@ import (
 const (
 	testNetHttp = "https://testnet.gxchain.org"
 	testNetWss  = "wss://testnet.gxchain.org"
+	testFaucet  = "https://testnet.faucet.gxchain.org/account/register"
 
 	testAccountName = "cli-wallet-test"
 	testAccountId   = "1.2.4015"
@@ -84,4 +86,28 @@ func Test_Transfer(t *testing.T) {
 
 	result, _ := json.Marshal(tx)
 	fmt.Println(string(result))
+}
+
+func Test_GenerateKeyPair(t *testing.T) {
+	keyPair, err := keypair.GenerateKeyPair("")
+	require.Nil(t, err)
+	fmt.Println(keyPair.BrainKey)
+	fmt.Println(keyPair.PrivateKey.ToWIF())
+	fmt.Println(keyPair.PrivateKey.PublicKey().String())
+}
+
+func Test_PrivateToPublic(t *testing.T) {
+	pub, err := keypair.PrivateToPublic(testPri)
+	require.Nil(t, err)
+	fmt.Println(pub)
+}
+
+func Test_IsValidPrivate(t *testing.T) {
+	bool := keypair.IsValidPrivate(testPri)
+	fmt.Println(bool)
+}
+
+func Test_IsValidPublic(t *testing.T) {
+	bool := keypair.IsValidPublic(testPub)
+	fmt.Println(bool)
 }

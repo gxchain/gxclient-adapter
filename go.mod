@@ -1,6 +1,8 @@
 module gxchain-adapter
 
-replace gxclient-go => github.com/gxchain/gxclient-go v0.0.0-20200319054608-38ba870598ab
+replace gxclient-go => github.com/gxchain/gxclient-go v0.0.0-20200324015609-2edf168e4dc7
+
+//replace gxclient-go => /Users/yediwu/GolandProjects/gxclient-go
 
 go 1.13
 

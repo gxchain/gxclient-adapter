@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"gxchain-adapter/api"
+	"gxclient-go/faucet"
 	gxcTypes "gxclient-go/types"
 	"strconv"
 	"testing"
@@ -37,7 +38,7 @@ func Test_GetBlockCount(t *testing.T) {
 func Test_GetBlockTxs(t *testing.T) {
 	restClient, err := api.GetInstance(testNetWss)
 	require.Nil(t, err)
-	txs, err := restClient.GetBlockTxs(22298074)
+	txs, err := restClient.GetBlockTxs(22493577)
 	require.Nil(t, err)
 	str, _ := json.Marshal(txs)
 	fmt.Println(string(str))
@@ -110,4 +111,11 @@ func Test_TokenDetail(t *testing.T) {
 	require.Nil(t, err)
 	str2, _ := json.Marshal(asset2)
 	fmt.Println(string(str2))
+}
+
+func TestApi_GetRegister(t *testing.T) {
+	transaction, err := faucet.Register(testFaucet, "cli-wallet-test-16", testPub, testPub, testPub)
+	require.Nil(t, err)
+	str, _ := json.Marshal(transaction)
+	fmt.Println(string(str))
 }

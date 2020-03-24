@@ -12,7 +12,7 @@ func Deserialize(raw_tx_hex string) ([]*types.Tx, error) {
 	var stx gxcTypes.SignedTransaction
 	json.Unmarshal([]byte(raw_tx_hex), &stx)
 
-	txs, err := TransactionToTx(stx.Transaction, "")
+	txs, err := transactionToTx(stx.Transaction)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func Sign(activePri, chainId, raw_tx_hex string) (string, error) {
 	return string(result), nil
 }
 
-func TransactionToTx(transaction *gxcTypes.Transaction, transactionId string) ([]*types.Tx, error) {
+func transactionToTx(transaction *gxcTypes.Transaction) ([]*types.Tx, error) {
 	var txs []*types.Tx
 	for _, op := range transaction.Operations {
 		if op.Type() != gxcTypes.TransferOpType {
@@ -111,13 +111,9 @@ func TransactionToTx(transaction *gxcTypes.Transaction, transactionId string) ([
 			extra["message"] = transferOp.Memo.Message.String()
 			extra["nonce"] = strconv.FormatUint(uint64(transferOp.Memo.Nonce), 10)
 		}
-		var txHash string
-		if len(transactionId) > 0 {
-			txHash = transactionId
-		}
 
 		tx := &types.Tx{
-			TxHash:      txHash,
+			TxHash:      "",
 			Inputs:      []types.UTXO{*in},
 			Outputs:     []types.UTXO{*out},
 			TxAt:        "",

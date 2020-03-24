@@ -178,7 +178,7 @@ func (restClient *RestClient) GetBlockTxs(block_no uint32) ([]*types.Tx, error) 
 	transactions := block.Transactions
 
 	for i, transaction := range transactions {
-		txs, err := TransactionToTx(&transaction, block.TransactionIds[i])
+		txs, err := restClient.TransactionToTx(&transaction, block.TransactionIds[i])
 		if err != nil {
 			return nil, err
 		}
@@ -313,7 +313,7 @@ func (restClient *RestClient) GetTransactionByBlockNumAndId(block_num uint32, tr
 	if err != nil {
 		return nil, err
 	}
-	txs, err := TransactionToTx(&block.Transactions[trx_in_block], block.TransactionIds[trx_in_block])
+	txs, err := restClient.TransactionToTx(&block.Transactions[trx_in_block], block.TransactionIds[trx_in_block])
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +326,7 @@ func (restClient *RestClient) GetTransaction(tx_hash string) ([]*types.Tx, error
 	if err != nil {
 		return nil, err
 	}
-	txs, err := TransactionToTx(transaction, tx_hash)
+	txs, err := restClient.TransactionToTx(transaction, tx_hash)
 	if err != nil {
 		return nil, err
 	}
@@ -443,7 +443,7 @@ func (restClient *RestClient) SignTransaction(raw_unsigned_tx_hex string) (*type
 		return nil, err
 	}
 
-	txs, err := TransactionToTx(stx.Transaction, resp.ID)
+	txs, err := restClient.TransactionToTx(stx.Transaction, resp.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -465,4 +465,68 @@ func (restClient *RestClient) TokenDetail(token string) (*types.Asset, error) {
 		Balance:         0,
 	}, nil
 
+}
+
+func (restClient *RestClient) TransactionToTx(transaction *gxcTypes.Transaction, transactionId string) ([]*types.Tx, error) {
+	var txs []*types.Tx
+	for _, op := range transaction.Operations {
+		if op.Type() != gxcTypes.TransferOpType {
+			continue
+		}
+		var transferOp gxcTypes.TransferOperation
+		byte, err := json.Marshal(op)
+		if err != nil {
+			return nil, err
+		}
+		json.Unmarshal(byte, &transferOp)
+
+		asset, err := restClient.Database.GetAsset(transferOp.Amount.AssetID.String())
+		if err != nil {
+			return nil, err
+		}
+		accounts, err := restClient.Database.GetAccountsByIds(transferOp.From.String(), transferOp.To.String())
+		if err != nil {
+			return nil, err
+		}
+
+		in := &types.UTXO{
+			Value:           transferOp.Amount.Amount,
+			Address:         accounts[0].Name,
+			TokenCode:       asset.Symbol,
+			TokenIdentifier: asset.ID.String(),
+			TokenDecimal:    asset.Precision,
+		}
+
+		out := &types.UTXO{
+			Value:           transferOp.Amount.Amount,
+			Address:         accounts[1].Name,
+			TokenCode:       asset.Symbol,
+			TokenIdentifier: asset.ID.String(),
+			TokenDecimal:    asset.Precision,
+		}
+
+		extra := map[string]string{}
+		if transferOp.Memo != nil {
+			extra["from"] = transferOp.Memo.From.String()
+			extra["to"] = transferOp.Memo.To.String()
+			extra["message"] = transferOp.Memo.Message.String()
+			extra["nonce"] = strconv.FormatUint(uint64(transferOp.Memo.Nonce), 10)
+		}
+		var txHash string
+		if len(transactionId) > 0 {
+			txHash = transactionId
+		}
+
+		tx := &types.Tx{
+			TxHash:      txHash,
+			Inputs:      []types.UTXO{*in},
+			Outputs:     []types.UTXO{*out},
+			TxAt:        "",
+			BlockNumber: 0,
+			ConfirmedAt: "",
+			Extra:       extra,
+		}
+		txs = append(txs, tx)
+	}
+	return txs, nil
 }
