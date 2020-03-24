@@ -1,4 +1,4 @@
-module gxchain-adapter
+module gxclient-adapter
 
 replace gxclient-go => github.com/gxchain/gxclient-go v0.0.0-20200324015609-2edf168e4dc7
 

@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/json"
 	"github.com/pkg/errors"
-	"gxchain-adapter/types"
+	"gxclient-adapter/types"
 	gxcTypes "gxclient-go/types"
 	"strconv"
 )

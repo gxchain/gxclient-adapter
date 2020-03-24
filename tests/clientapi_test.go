@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/require"
-	"gxchain-adapter/api"
+	"gxclient-adapter/api"
 	"gxclient-go/keypair"
 	gxcTypes "gxclient-go/types"
 	"testing"

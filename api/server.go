@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
-	"gxchain-adapter/types"
+	"gxclient-adapter/types"
 	"gxclient-go/api/broadcast"
 	"gxclient-go/api/database"
 	"gxclient-go/api/history"
