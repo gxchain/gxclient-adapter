@@ -75,8 +75,10 @@ func Sign(activePri, chainId, raw_tx_hex string) (string, error) {
 		return "", errors.Wrap(err, "failed to sign the transaction")
 	}
 
-	result, _ := json.Marshal(stx)
-	return string(result), nil
+	//return signature only
+	return stx.Signatures[0], nil
+	//result, _ := json.Marshal(stx)
+	//return string(result), nil
 }
 
 func transactionToTx(transaction *gxcTypes.Transaction) ([]*types.Tx, error) {

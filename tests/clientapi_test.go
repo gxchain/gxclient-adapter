@@ -7,6 +7,7 @@ import (
 	"gxclient-adapter/api"
 	"gxclient-go/keypair"
 	gxcTypes "gxclient-go/types"
+	"math"
 	"testing"
 )
 
@@ -52,7 +53,7 @@ func Test_Transfer(t *testing.T) {
 	restClient, err := api.GetInstance(testNetWss)
 	require.Nil(t, err)
 
-	to := "nathan"
+	to := "init0"
 	memo := "transfer memo"
 	var memoOb *gxcTypes.Memo
 
@@ -67,19 +68,23 @@ func Test_Transfer(t *testing.T) {
 	}
 
 	//step1:	server build transaction
-	unSignedTxStr, err := restClient.BuildTransaction(testAccountName, to, "GXC", 3.19, memoOb)
+	realAmount := 3.26
+	symbol := "GXC"
+	tokenDetail, err := restClient.TokenDetail(symbol)
+	amount := uint64(realAmount * math.Pow10(int(tokenDetail.TokenDecimal)))
+	unSignedTxStr, err := restClient.BuildTransaction(testAccountName, to, symbol, amount, memoOb)
 	require.Nil(t, err)
 	fmt.Printf("Build Transaction %s \n", unSignedTxStr)
 
 	//step2:	client sign transaction
 	chainId, err := restClient.Database.GetChainId()
 	require.Nil(t, err)
-	signedTxStr, err := api.Sign(testPri, chainId, unSignedTxStr)
-	fmt.Printf("signed transaction %s \n", signedTxStr)
+	signature, err := api.Sign(testPri, chainId, unSignedTxStr)
+	fmt.Printf("signature %s \n", signature)
 	require.Nil(t, err)
 
 	//step3:	server broadcast signed transaction
-	tx, err := restClient.SignTransaction(signedTxStr)
+	tx, err := restClient.SignTransaction(unSignedTxStr, signature)
 	txResultStr, _ := json.Marshal(tx)
 	fmt.Printf("tx result %s \n", txResultStr)
 	require.Nil(t, err)

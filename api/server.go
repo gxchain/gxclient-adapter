@@ -18,7 +18,6 @@ import (
 	"gxclient-go/sign"
 	"gxclient-go/transaction"
 	gxcTypes "gxclient-go/types"
-	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -261,6 +260,8 @@ func (restClient *RestClient) TxsForAddress(address, since_tx_id string, limit i
 		return nil, err
 	}
 
+	assets := map[string]*types.Asset{}
+	accounts := map[string]*gxcTypes.Account{}
 	for _, oph := range ophs {
 		if byte_s, err := json.Marshal(oph); err == nil {
 			tx := gjson.ParseBytes(byte_s)
@@ -270,22 +271,42 @@ func (restClient *RestClient) TxsForAddress(address, since_tx_id string, limit i
 				continue
 			}
 
+			tokenIdentifier := operation.Get("1.amount.asset_id").String()
+			if assets[tokenIdentifier] == nil {
+				asset, _ := restClient.TokenDetail(tokenIdentifier)
+				assets[tokenIdentifier] = asset
+			}
+			from := operation.Get("1.from").String()
+			if accounts[from] == nil {
+				acc, _ := restClient.Database.GetAccountsByIds(from)
+				accounts[from] = acc[0]
+			}
+			to := operation.Get("1.to").String()
+			if accounts[to] == nil {
+				acc, _ := restClient.Database.GetAccountsByIds(to)
+				accounts[to] = acc[0]
+			}
+
 			in := &types.UTXO{
-				Value:     operation.Get("1.amount.amount").Uint(),
-				Address:   operation.Get("1.from").String(),
-				TokenCode: operation.Get("1.amount.asset_id").String(),
+				Value:           operation.Get("1.amount.amount").Uint(),
+				Address:         accounts[from].Name,
+				TokenIdentifier: tokenIdentifier,
+				TokenCode:       assets[tokenIdentifier].TokenCode,
+				TokenDecimal:    assets[tokenIdentifier].TokenDecimal,
 			}
 			out := &types.UTXO{
-				Value:     operation.Get("1.amount.amount").Uint(),
-				Address:   operation.Get("1.to").String(),
-				TokenCode: operation.Get("1.amount.asset_id").String(),
+				Value:           operation.Get("1.amount.amount").Uint(),
+				Address:         accounts[to].Name,
+				TokenIdentifier: tokenIdentifier,
+				TokenCode:       assets[tokenIdentifier].TokenCode,
+				TokenDecimal:    assets[tokenIdentifier].TokenDecimal,
 			}
 
 			extra := map[string]string{}
 			if operation.Get("1.memo").Exists() {
 				extra["from"] = operation.Get("1.memo.from").String()
 				extra["to"] = operation.Get("1.memo.to").String()
-				extra["message"] = operation.Get("1.memo.from").String()
+				extra["message"] = operation.Get("1.memo.message").String()
 				extra["nonce"] = strconv.FormatUint(operation.Get("1.memo.nonce").Uint(), 10)
 			}
 			extra["block_num"] = strconv.FormatInt(tx.Get("block_num").Int(), 10)
@@ -333,7 +354,7 @@ func (restClient *RestClient) GetTransaction(tx_hash string) ([]*types.Tx, error
 	return txs, nil
 }
 
-func (restClient *RestClient) BuildTransaction(from_address, to_address, symbol string, amount float64, memoOb *gxcTypes.Memo) (string, error) {
+func (restClient *RestClient) BuildTransaction(from_address, to_address, symbol string, amount uint64, memoOb *gxcTypes.Memo) (string, error) {
 	fromAccount, err := restClient.Database.GetAccount(from_address)
 	if err != nil {
 		return "", err
@@ -354,7 +375,7 @@ func (restClient *RestClient) BuildTransaction(from_address, to_address, symbol 
 	}
 	amountAssets := gxcTypes.AssetAmount{
 		AssetID: amountSymbol.ID,
-		Amount:  uint64(amount * math.Pow10(int(amountSymbol.Precision))),
+		Amount:  amount,
 	}
 
 	fee, err := restClient.Database.GetAsset("GXC")
@@ -435,9 +456,10 @@ func (restClient *RestClient) TransactionFee(raw_unsigned_tx_hex string) (string
 }
 
 //sign unsigned tx with given signature and broadcast
-func (restClient *RestClient) SignTransaction(raw_unsigned_tx_hex string) (*types.Tx, error) {
+func (restClient *RestClient) SignTransaction(unsignex_tx_hex, signature string) (*types.Tx, error) {
 	var stx *gxcTypes.SignedTransaction
-	json.Unmarshal([]byte(raw_unsigned_tx_hex), &stx)
+	json.Unmarshal([]byte(unsignex_tx_hex), &stx)
+	stx.Signatures = []string{signature}
 	resp, err := restClient.Broadcast.BroadcastTransactionSynchronous(stx.Transaction)
 	if err != nil {
 		return nil, err
