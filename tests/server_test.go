@@ -14,7 +14,7 @@ import (
 func Test_Pubkey2address(t *testing.T) {
 	restClient, err := api.GetInstance(testNetWss)
 	require.Nil(t, err)
-	address, err := restClient.Pubkey2address(testPub)
+	address, err := restClient.Pubkey2address(testPubHexCom)
 	require.Nil(t, err)
 	fmt.Println(address)
 }

@@ -145,12 +145,8 @@ func (restClient *RestClient) AccountId2address(accountId string) (string, error
 
 //accountId to address
 func (restClient *RestClient) Pubkey2address(pubKeyHex string) ([]string, error) {
-	pubKey, err := PubKeyHexToBase58(pubKeyHex)
-	if err != nil {
-		return nil, err
-	}
 	var adds []string
-	ids, err := restClient.Pubkey2accountId(pubKey)
+	ids, err := restClient.Pubkey2accountId(pubKeyHex)
 	if err != nil {
 		return nil, err
 	}
