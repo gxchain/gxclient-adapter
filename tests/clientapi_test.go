@@ -20,7 +20,10 @@ const (
 	testAccountId   = "1.2.4015"
 	testPri         = "5JsvYffKR8n4yNfCk36KkKFCzg6vo5fdBqqDJLavSifXSV9NABo"
 	testMemoPri     = "5JsvYffKR8n4yNfCk36KkKFCzg6vo5fdBqqDJLavSifXSV9NABo"
+	testPriHex      = "8bf481abeecbb3654e5f8581af0c8bd8d83df31fb2df8cac0440c100d84a3141"
+	testMemoPriHex  = "8bf481abeecbb3654e5f8581af0c8bd8d83df31fb2df8cac0440c100d84a3141"
 	testPub         = "GXC58owosbFrudGVp8VCuMvDWpenx7AZSLwxEtAVqjWeqZ4YVLLWb"
+	testPubHexCom   = "0220843df25002cef45f3a5896806d4b11fcd3f554693107c24622c4bdd1199ae3"
 )
 
 func Test_Simple(t *testing.T) {
@@ -44,7 +47,7 @@ func Test_DeserializeMemo(t *testing.T) {
 	message := "78ac2144776911f195c934c000f3036c374015f991d3d4b928c418f98ab2926e"
 	nonce := gxcTypes.UInt64(3768974234669558428)
 
-	str, err := api.DeserializeMemo(testMemoPri, from, to, message, nonce)
+	str, err := api.DeserializeMemo(testMemoPriHex, from, to, message, nonce)
 	require.Nil(t, err)
 	fmt.Println(str)
 }
@@ -63,7 +66,7 @@ func Test_Transfer(t *testing.T) {
 		require.Nil(t, err)
 		toAccount, err := restClient.Database.GetAccount(to)
 		require.Nil(t, err)
-		memoOb, err = api.EncryptMemo(testMemoPri, memo, &fromAccount.Options.MemoKey, &toAccount.Options.MemoKey)
+		memoOb, err = api.EncryptMemo(testMemoPriHex, memo, &fromAccount.Options.MemoKey, &toAccount.Options.MemoKey)
 		require.Nil(t, err)
 	}
 
@@ -79,7 +82,7 @@ func Test_Transfer(t *testing.T) {
 	//step2:	client sign transaction
 	chainId, err := restClient.Database.GetChainId()
 	require.Nil(t, err)
-	signature, err := api.Sign(testPri, chainId, unSignedTxStr)
+	signature, err := api.Sign(testPriHex, chainId, unSignedTxStr)
 	fmt.Printf("signature %s \n", signature)
 	require.Nil(t, err)
 
@@ -115,4 +118,26 @@ func Test_IsValidPrivate(t *testing.T) {
 func Test_IsValidPublic(t *testing.T) {
 	bool := keypair.IsValidPublic(testPub)
 	fmt.Println(bool)
+}
+
+func Test_Convert(t *testing.T) {
+	priHex, err := api.PriKeyWifToHex(testPri)
+	require.Nil(t, err)
+	fmt.Println(priHex)
+	require.Equal(t, priHex, testPriHex)
+
+	priWif, err := api.PriKeyHexToWif(testPriHex)
+	require.Nil(t, err)
+	fmt.Println(priWif)
+	require.Equal(t, priWif, testPri)
+
+	pubHex, err := api.PubKeyBase58ToHex(testPub)
+	require.Nil(t, err)
+	fmt.Println(pubHex)
+	require.Equal(t, pubHex, testPubHexCom)
+
+	pubBase58, err := api.PubKeyHexToBase58(testPubHexCom)
+	require.Nil(t, err)
+	fmt.Println(pubBase58)
+	require.Equal(t, pubBase58, testPub)
 }

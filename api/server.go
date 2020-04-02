@@ -119,8 +119,12 @@ func GetInstance(url string) (*RestClient, error) {
 }
 
 //pubkey to accountId
-func (restClient *RestClient) Pubkey2accountId(pubkey string) ([]string, error) {
-	accounts, err := restClient.Database.GetAccountsByPublicKey(pubkey)
+func (restClient *RestClient) Pubkey2accountId(pubKeyHex string) ([]string, error) {
+	pubKey, err := PubKeyHexToBase58(pubKeyHex)
+	if err != nil {
+		return nil, err
+	}
+	accounts, err := restClient.Database.GetAccountsByPublicKey(pubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -140,9 +144,13 @@ func (restClient *RestClient) AccountId2address(accountId string) (string, error
 }
 
 //accountId to address
-func (restClient *RestClient) Pubkey2address(pubkey string) ([]string, error) {
+func (restClient *RestClient) Pubkey2address(pubKeyHex string) ([]string, error) {
+	pubKey, err := PubKeyHexToBase58(pubKeyHex)
+	if err != nil {
+		return nil, err
+	}
 	var adds []string
-	ids, err := restClient.Pubkey2accountId(pubkey)
+	ids, err := restClient.Pubkey2accountId(pubKey)
 	if err != nil {
 		return nil, err
 	}
