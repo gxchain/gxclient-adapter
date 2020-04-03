@@ -292,6 +292,12 @@ func (restClient *RestClient) TxsForAddress(address, since_tx_id string, limit i
 				asset, _ := restClient.TokenDetail(tokenIdentifier)
 				assets[tokenIdentifier] = asset
 			}
+			feeIdentifier := operation.Get("1.fee.asset_id").String()
+			if assets[feeIdentifier] == nil {
+				asset, _ := restClient.TokenDetail(feeIdentifier)
+				assets[feeIdentifier] = asset
+			}
+
 			from := operation.Get("1.from").String()
 			if accounts[from] == nil {
 				acc, _ := restClient.Database.GetAccountsByIds(from)
@@ -328,6 +334,10 @@ func (restClient *RestClient) TxsForAddress(address, since_tx_id string, limit i
 			extra["block_num"] = strconv.FormatInt(tx.Get("block_num").Int(), 10)
 			extra["trx_in_block"] = strconv.FormatInt(tx.Get("trx_in_block").Int(), 10)
 			extra["id"] = tx.Get("id").String()
+			extra["feeAmount"] = strconv.FormatUint(operation.Get("1.fee.amount").Uint(), 10)
+			extra["feeTokenCode"] = assets[feeIdentifier].TokenCode
+			extra["feeTokenIdentifier"] = feeIdentifier
+			extra["feeTokenDecimal"] = strconv.FormatUint(uint64(assets[feeIdentifier].TokenDecimal), 10)
 
 			txOb := &types.Tx{
 				TxHash:      "",
@@ -550,6 +560,15 @@ func (restClient *RestClient) TransactionToTx(transaction *gxcTypes.Transaction,
 			extra["message"] = transferOp.Memo.Message.String()
 			extra["nonce"] = strconv.FormatUint(uint64(transferOp.Memo.Nonce), 10)
 		}
+		feeAsset, err := restClient.Database.GetAsset(transferOp.Fee.AssetID.String())
+		if err != nil {
+			return nil, err
+		}
+
+		extra["feeAmount"] = strconv.FormatUint(transferOp.Fee.Amount, 10)
+		extra["feeTokenCode"] = feeAsset.Symbol
+		extra["feeTokenIdentifier"] = feeAsset.ID.String()
+		extra["feeTokenDecimal"] = strconv.FormatUint(uint64(feeAsset.Precision), 10)
 		var txHash string
 		if len(transactionId) > 0 {
 			txHash = transactionId

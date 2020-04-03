@@ -128,6 +128,8 @@ func transactionToTx(transaction *gxcTypes.Transaction) ([]*types.Tx, error) {
 			extra["message"] = transferOp.Memo.Message.String()
 			extra["nonce"] = strconv.FormatUint(uint64(transferOp.Memo.Nonce), 10)
 		}
+		extra["feeAmount"] = strconv.FormatUint(transferOp.Fee.Amount, 10)
+		extra["feeTokenIdentifier"] = transferOp.Fee.AssetID.String()
 
 		tx := &types.Tx{
 			TxHash:      "",
