@@ -143,6 +143,18 @@ func (restClient *RestClient) AccountId2address(accountId string) (string, error
 	return accounts[0].Name, nil
 }
 
+//address to accountId
+func (restClient *RestClient) Address2AccountId(address string) (string, error) {
+	account, err := restClient.Database.GetAccount(address)
+	if err != nil {
+		return "", err
+	}
+	if account == nil {
+		return "", errors.Errorf("account %s not exist", address)
+	}
+	return account.ID.String(), nil
+}
+
 //accountId to address
 func (restClient *RestClient) Pubkey2address(pubKeyHex string) ([]string, error) {
 	var adds []string

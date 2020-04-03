@@ -27,6 +27,14 @@ func Test_AccountId2address(t *testing.T) {
 	fmt.Println(address)
 }
 
+func Test_Address2AccountId(t *testing.T) {
+	restClient, err := api.GetInstance(testNetWss)
+	require.Nil(t, err)
+	id, err := restClient.Address2AccountId(testAccountName)
+	require.Nil(t, err)
+	fmt.Println(id)
+}
+
 func Test_GetBlockCount(t *testing.T) {
 	restClient, err := api.GetInstance(testNetWss)
 	require.Nil(t, err)
