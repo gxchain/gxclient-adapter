@@ -74,7 +74,7 @@ func Test_TxsForAddress(t *testing.T) {
 	restClient, err := api.GetInstance(testNetHttp)
 	require.Nil(t, err)
 	//第一页
-	txs1, err := restClient.TxsForAddress(testAccountName, "", 10)
+	txs1, err := restClient.TxsForAddress(testAccountName, "", 5)
 	require.Nil(t, err)
 	str1, _ := json.Marshal(txs1)
 	fmt.Println(string(str1))
@@ -96,6 +96,25 @@ func Test_TxsForAddress(t *testing.T) {
 	require.Nil(t, err)
 	txStr, _ := json.Marshal(txs)
 	fmt.Println(string(txStr))
+}
+
+func Test_TxsForAddressFull(t *testing.T) {
+	restClient, err := api.GetInstance(testNetHttp)
+	require.Nil(t, err)
+	//第一页
+	txs1, err := restClient.TxsForAddressFull(testAccountName, "", 10)
+	require.Nil(t, err)
+	str1, _ := json.Marshal(txs1)
+	fmt.Println(string(str1))
+	//下一页
+	id := txs1[len(txs1)-1].Extra["id"]
+	obId := gxcTypes.MustParseObjectID(id)
+	obId.ID = obId.ID - 1
+
+	txs2, err := restClient.TxsForAddressFull(testAccountName, obId.String(), 10)
+	require.Nil(t, err)
+	str2, _ := json.Marshal(txs2)
+	fmt.Println(string(str2))
 }
 
 func Test_GetTransaction(t *testing.T) {

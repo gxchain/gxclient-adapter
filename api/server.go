@@ -193,7 +193,7 @@ func (restClient *RestClient) GetBlockTxs(block_no uint32) ([]*types.Tx, error) 
 	transactions := block.Transactions
 
 	for i, transaction := range transactions {
-		txs, err := restClient.TransactionToTx(&transaction, block.TransactionIds[i])
+		txs, err := restClient.TransactionToTx(&transaction, block.TransactionIds[i], &block.Timestamp)
 		if err != nil {
 			return nil, err
 		}
@@ -258,6 +258,105 @@ func (restClient *RestClient) BalancesForAddress(address string) ([]*types.Asset
 		})
 	}
 	return assets, nil
+}
+
+//address tx list
+func (restClient *RestClient) TxsForAddressFull(address, since_tx_id string, limit int) ([]*types.Tx, error) {
+	var txs []*types.Tx
+	acc, err := restClient.Database.GetAccount(address)
+	if err != nil {
+		return nil, err
+	}
+	//sice为空，取最近的limit条
+	if len(since_tx_id) == 0 {
+		since_tx_id = "1.11.0"
+	}
+	ophs, err := restClient.History.GetAccountHistory(acc.ID.String(), "1.11.0", limit, since_tx_id)
+	if err != nil {
+		return nil, err
+	}
+
+	assets := map[string]*types.Asset{}
+	accounts := map[string]*gxcTypes.Account{}
+	for _, oph := range ophs {
+		if byte_s, err := json.Marshal(oph); err == nil {
+			tx := gjson.ParseBytes(byte_s)
+			operation := tx.Get("op")
+			tx_op_code := operation.Get("0").Uint()
+			if gxcTypes.OpType(tx_op_code) != gxcTypes.TransferOpType {
+				continue
+			}
+			block, err := restClient.Database.GetBlock(oph.BlockNumber)
+			if err != nil {
+				return nil, err
+			}
+			var transferOp gxcTypes.TransferOperation
+			byte, err := json.Marshal(block.Transactions[oph.TransactionsInBlock].Operations[0])
+			if err != nil {
+				return nil, err
+			}
+			json.Unmarshal(byte, &transferOp)
+
+			tokenIdentifier := transferOp.Amount.AssetID.String()
+			if assets[tokenIdentifier] == nil {
+				asset, _ := restClient.TokenDetail(tokenIdentifier)
+				assets[tokenIdentifier] = asset
+			}
+			feeIdentifier := transferOp.Amount.AssetID.String()
+			if assets[feeIdentifier] == nil {
+				asset, _ := restClient.TokenDetail(feeIdentifier)
+				assets[feeIdentifier] = asset
+			}
+
+			from := transferOp.From.String()
+			if accounts[from] == nil {
+				acc, _ := restClient.Database.GetAccountsByIds(from)
+				accounts[from] = acc[0]
+			}
+			to := transferOp.To.String()
+			if accounts[to] == nil {
+				acc, _ := restClient.Database.GetAccountsByIds(to)
+				accounts[to] = acc[0]
+			}
+
+			in := &types.UTXO{
+				Value:           transferOp.Amount.Amount,
+				Address:         accounts[from].Name,
+				TokenIdentifier: tokenIdentifier,
+				TokenCode:       assets[tokenIdentifier].TokenCode,
+				TokenDecimal:    assets[tokenIdentifier].TokenDecimal,
+			}
+
+			out := &types.UTXO{
+				Value:           transferOp.Amount.Amount,
+				Address:         accounts[to].Name,
+				TokenIdentifier: tokenIdentifier,
+				TokenCode:       assets[tokenIdentifier].TokenCode,
+				TokenDecimal:    assets[tokenIdentifier].TokenDecimal,
+			}
+
+			extra := map[string]string{}
+			if transferOp.Memo != nil {
+				extra["from"] = transferOp.Memo.From.String()
+				extra["to"] = transferOp.Memo.To.String()
+				extra["message"] = transferOp.Memo.Message.String()
+				extra["nonce"] = strconv.FormatUint(uint64(transferOp.Memo.Nonce), 10)
+			}
+			extra["id"] = oph.ID
+
+			txOb := &types.Tx{
+				TxHash:      block.TransactionIds[oph.TransactionsInBlock],
+				Inputs:      []types.UTXO{*in},
+				Outputs:     []types.UTXO{*out},
+				TxAt:        block.Timestamp.Format("2006-01-02T15:04:05"),
+				BlockNumber: int64(oph.BlockNumber),
+				ConfirmedAt: "",
+				Extra:       extra,
+			}
+			txs = append(txs, txOb)
+		}
+	}
+	return txs, nil
 }
 
 //address tx list
@@ -360,7 +459,7 @@ func (restClient *RestClient) GetTransactionByBlockNumAndId(block_num uint32, tr
 	if err != nil {
 		return nil, err
 	}
-	txs, err := restClient.TransactionToTx(&block.Transactions[trx_in_block], block.TransactionIds[trx_in_block])
+	txs, err := restClient.TransactionToTx(&block.Transactions[trx_in_block], block.TransactionIds[trx_in_block], &block.Timestamp)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +472,7 @@ func (restClient *RestClient) GetTransaction(tx_hash string) ([]*types.Tx, error
 	if err != nil || transaction == nil {
 		return nil, err
 	}
-	txs, err := restClient.TransactionToTx(transaction, tx_hash)
+	txs, err := restClient.TransactionToTx(transaction, tx_hash, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -491,7 +590,7 @@ func (restClient *RestClient) SignTransaction(unsignex_tx_hex, signature string)
 		return nil, err
 	}
 
-	txs, err := restClient.TransactionToTx(stx.Transaction, resp.ID)
+	txs, err := restClient.TransactionToTx(stx.Transaction, resp.ID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -515,7 +614,7 @@ func (restClient *RestClient) TokenDetail(token string) (*types.Asset, error) {
 
 }
 
-func (restClient *RestClient) TransactionToTx(transaction *gxcTypes.Transaction, transactionId string) ([]*types.Tx, error) {
+func (restClient *RestClient) TransactionToTx(transaction *gxcTypes.Transaction, transactionId string, blockTime *gxcTypes.Time) ([]*types.Tx, error) {
 	var txs []*types.Tx
 	for _, op := range transaction.Operations {
 		if op.Type() != gxcTypes.TransferOpType {
@@ -574,11 +673,16 @@ func (restClient *RestClient) TransactionToTx(transaction *gxcTypes.Transaction,
 			txHash = transactionId
 		}
 
+		txAt := ""
+		if blockTime != nil {
+			txAt = blockTime.Format("2006-01-02T15:04:05")
+		}
+
 		tx := &types.Tx{
 			TxHash:      txHash,
 			Inputs:      []types.UTXO{*in},
 			Outputs:     []types.UTXO{*out},
-			TxAt:        "",
+			TxAt:        txAt,
 			BlockNumber: 0,
 			ConfirmedAt: "",
 			Extra:       extra,

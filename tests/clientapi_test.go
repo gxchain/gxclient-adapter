@@ -3,6 +3,7 @@ package tests
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 	"gxclient-adapter/api"
 	"gxclient-go/keypair"
@@ -71,10 +72,10 @@ func Test_Transfer(t *testing.T) {
 	}
 
 	//step1:	server build transaction
-	realAmount := 3.26
+	realAmount := 4.10
 	symbol := "GXC"
 	tokenDetail, err := restClient.TokenDetail(symbol)
-	amount := uint64(realAmount * math.Pow10(int(tokenDetail.TokenDecimal)))
+	amount := uint64(decimal.NewFromFloat(realAmount).Mul(decimal.NewFromFloat(math.Pow10(int(tokenDetail.TokenDecimal)))).IntPart())
 	unSignedTxStr, err := restClient.BuildTransaction(testAccountName, to, symbol, amount, memoOb)
 	require.Nil(t, err)
 	fmt.Printf("Build Transaction %s \n", unSignedTxStr)
