@@ -370,7 +370,7 @@ func (restClient *RestClient) GetTransactionByBlockNumAndId(block_num uint32, tr
 //tx detail by id
 func (restClient *RestClient) GetTransaction(tx_hash string) ([]*types.Tx, error) {
 	transaction, err := restClient.Database.GetTransactionByTxid(tx_hash)
-	if err != nil {
+	if err != nil || transaction == nil {
 		return nil, err
 	}
 	txs, err := restClient.TransactionToTx(transaction, tx_hash)
