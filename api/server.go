@@ -50,7 +50,7 @@ func NewRestClient(url string) (*RestClient, error) {
 	var cc rpc.CallCloser
 	var err error
 	if strings.HasPrefix(url, "http") || strings.HasPrefix(url, "https") {
-		cc, err = http.NewHttpTransport(url)
+		cc = http.NewTransport(url)
 	} else {
 		cc, err = websocket.NewTransport(url)
 	}
@@ -61,14 +61,14 @@ func NewRestClient(url string) (*RestClient, error) {
 	client := &RestClient{cc: cc}
 
 	if strings.HasPrefix(url, "http") || strings.HasPrefix(url, "https") {
-		client.Database = database.NewAPI(0, cc)
+		client.Database = database.NewAPI("database", cc)
 		chainID, err := client.Database.GetChainId()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get database ID")
 		}
 		client.chainID = chainID
-		client.History = history.NewAPI(1, cc)
-		client.Broadcast = broadcast.NewAPI(1, cc)
+		client.History = history.NewAPI("history", cc)
+		client.Broadcast = broadcast.NewAPI("network_broadcast", cc)
 		return client, nil
 	}
 

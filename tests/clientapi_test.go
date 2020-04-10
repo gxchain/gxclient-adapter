@@ -53,7 +53,7 @@ func Test_DeserializeMemo(t *testing.T) {
 }
 
 func Test_Transfer(t *testing.T) {
-	restClient, err := api.GetInstance(testNetWss)
+	restClient, err := api.GetInstance(testNetHttp)
 	require.Nil(t, err)
 
 	to := "init0"
