@@ -24,6 +24,7 @@ import (
 	"time"
 )
 
+var nilNum = -1 //约定为空的数字
 var restClient *RestClient
 var once *sync.Once = &sync.Once{}
 
@@ -193,7 +194,7 @@ func (restClient *RestClient) GetBlockTxs(block_no uint32) ([]*types.Tx, error) 
 	transactions := block.Transactions
 
 	for i, transaction := range transactions {
-		txs, err := restClient.TransactionToTx(&transaction, block.TransactionIds[i], &block.Timestamp)
+		txs, err := restClient.TransactionToTx(&transaction, block.TransactionIds[i], &block.Timestamp, i)
 		if err != nil {
 			return nil, err
 		}
@@ -459,7 +460,7 @@ func (restClient *RestClient) GetTransactionByBlockNumAndId(block_num uint32, tr
 	if err != nil {
 		return nil, err
 	}
-	txs, err := restClient.TransactionToTx(&block.Transactions[trx_in_block], block.TransactionIds[trx_in_block], &block.Timestamp)
+	txs, err := restClient.TransactionToTx(&block.Transactions[trx_in_block], block.TransactionIds[trx_in_block], &block.Timestamp, trx_in_block)
 	if err != nil {
 		return nil, err
 	}
@@ -472,7 +473,7 @@ func (restClient *RestClient) GetTransaction(tx_hash string) ([]*types.Tx, error
 	if err != nil || transaction == nil {
 		return nil, err
 	}
-	txs, err := restClient.TransactionToTx(transaction, tx_hash, nil)
+	txs, err := restClient.TransactionToTx(transaction, tx_hash, nil, nilNum)
 	if err != nil {
 		return nil, err
 	}
@@ -590,7 +591,7 @@ func (restClient *RestClient) SignTransaction(unsignex_tx_hex, signature string)
 		return nil, err
 	}
 
-	txs, err := restClient.TransactionToTx(stx.Transaction, resp.ID, nil)
+	txs, err := restClient.TransactionToTx(stx.Transaction, resp.ID, nil, nilNum)
 	if err != nil {
 		return nil, err
 	}
@@ -614,7 +615,7 @@ func (restClient *RestClient) TokenDetail(token string) (*types.Asset, error) {
 
 }
 
-func (restClient *RestClient) TransactionToTx(transaction *gxcTypes.Transaction, transactionId string, blockTime *gxcTypes.Time) ([]*types.Tx, error) {
+func (restClient *RestClient) TransactionToTx(transaction *gxcTypes.Transaction, transactionId string, blockTime *gxcTypes.Time, index int) ([]*types.Tx, error) {
 	var txs []*types.Tx
 	for _, op := range transaction.Operations {
 		if op.Type() != gxcTypes.TransferOpType {
@@ -668,6 +669,10 @@ func (restClient *RestClient) TransactionToTx(transaction *gxcTypes.Transaction,
 		extra["feeTokenCode"] = feeAsset.Symbol
 		extra["feeTokenIdentifier"] = feeAsset.ID.String()
 		extra["feeTokenDecimal"] = strconv.FormatUint(uint64(feeAsset.Precision), 10)
+
+		if index != nilNum {
+			extra["trx_in_block"] = strconv.FormatInt(int64(index), 10)
+		}
 		var txHash string
 		if len(transactionId) > 0 {
 			txHash = transactionId
