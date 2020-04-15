@@ -469,11 +469,12 @@ func (restClient *RestClient) GetTransactionByBlockNumAndId(block_num uint32, tr
 
 //tx detail by id
 func (restClient *RestClient) GetTransaction(tx_hash string) ([]*types.Tx, error) {
-	transaction, err := restClient.Database.GetTransactionByTxid(tx_hash)
+	transaction, err := restClient.Database.GeTransactionExtByTxid(tx_hash)
 	if err != nil || transaction == nil {
 		return nil, err
 	}
-	txs, err := restClient.TransactionToTx(transaction, tx_hash, nil, nilNum)
+	txs, err := restClient.TransactionToTx(transaction.Transaction, tx_hash, nil, nilNum)
+	txs[0].BlockNumber = int64(transaction.BlockNumber)
 	if err != nil {
 		return nil, err
 	}
