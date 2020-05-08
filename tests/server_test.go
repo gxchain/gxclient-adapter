@@ -46,7 +46,7 @@ func Test_GetBlockCount(t *testing.T) {
 func Test_GetBlockTxs(t *testing.T) {
 	restClient, err := api.GetInstance(testNetHttp)
 	require.Nil(t, err)
-	txs, err := restClient.GetBlockTxs(22493577)
+	txs, err := restClient.GetBlockTxs(29617777)
 	require.Nil(t, err)
 	str, _ := json.Marshal(txs)
 	fmt.Println(string(str))

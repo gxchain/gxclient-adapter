@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	testNetHttp = "https://testnet.gxchain.org"
+	testNetHttp = "https://node8.gxb.io"
 	testNetWss  = "wss://testnet.gxchain.org"
 	testFaucet  = "https://testnet.faucet.gxchain.org/account/register"
 
@@ -62,11 +62,12 @@ func Test_Transfer(t *testing.T) {
 	var memoOb *gxcTypes.Memo
 
 	//step0:	client do param preparation
-	if len(memo) > 0 {
-		fromAccount, err := restClient.Database.GetAccount(testAccountName)
-		require.Nil(t, err)
-		toAccount, err := restClient.Database.GetAccount(to)
-		require.Nil(t, err)
+	fromAccount, err := restClient.Database.GetAccount(testAccountName)
+	require.Nil(t, err)
+	toAccount, err := restClient.Database.GetAccount(to)
+	require.Nil(t, err)
+	//memoOb set nil when memoKey not exist
+	if len(memo) > 0 && !fromAccount.Options.MemoKey.IsNul() && !toAccount.Options.MemoKey.IsNul() {
 		memoOb, err = api.EncryptMemo(testMemoPriHex, memo, &fromAccount.Options.MemoKey, &toAccount.Options.MemoKey)
 		require.Nil(t, err)
 	}
