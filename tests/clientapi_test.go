@@ -53,12 +53,37 @@ func Test_DeserializeMemo(t *testing.T) {
 	fmt.Println(str)
 }
 
-func Test_Transfer(t *testing.T) {
+func Test_GetFee(t *testing.T) {
 	restClient, err := api.GetInstance(testNetHttp)
 	require.Nil(t, err)
 
 	to := "init0"
-	memo := "transfer memo"
+	memo := "transfer memo xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+	var memoOb *gxcTypes.Memo
+
+	//step0:	client do param preparation
+	fromAccount, err := restClient.Database.GetAccount("init0")
+	require.Nil(t, err)
+	toAccount, err := restClient.Database.GetAccount(to)
+	require.Nil(t, err)
+	//memoOb set nil when memoKey not exist
+	if len(memo) > 0 && !fromAccount.Options.MemoKey.IsNul() && !toAccount.Options.MemoKey.IsNul() {
+		memoOb, err = api.EncryptMemo(testMemoPriHex, memo, &fromAccount.Options.MemoKey, &toAccount.Options.MemoKey)
+		require.Nil(t, err)
+	}
+
+	//step1:	get required fee
+	fee, err := restClient.GetRequiredFee(memoOb)
+	require.Nil(t, err)
+	fmt.Printf("Fee amount %f \n", fee)
+}
+
+func Test_Transfer(t *testing.T) {
+	restClient, err := api.GetInstance(testNetWss)
+	require.Nil(t, err)
+
+	to := "init0"
+	memo := "transfer memo xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 	var memoOb *gxcTypes.Memo
 
 	//step0:	client do param preparation
