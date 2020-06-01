@@ -75,7 +75,7 @@ func Test_GetFee(t *testing.T) {
 	//step1:	get required fee
 	fee, err := restClient.GetRequiredFee(memoOb)
 	require.Nil(t, err)
-	fmt.Printf("Fee amount %f \n", fee)
+	fmt.Printf("Fee amount %d \n", fee)
 }
 
 func Test_Transfer(t *testing.T) {

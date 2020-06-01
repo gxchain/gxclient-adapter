@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
-	"github.com/shopspring/decimal"
 	"github.com/tidwall/gjson"
 	"gxclient-adapter/types"
 	"gxclient-go/api/broadcast"
@@ -482,7 +481,7 @@ func (restClient *RestClient) GetTransaction(tx_hash string) ([]*types.Tx, error
 	return txs, nil
 }
 
-func (restClient *RestClient) GetRequiredFee(memoOb *gxcTypes.Memo) (float64, error) {
+func (restClient *RestClient) GetRequiredFee(memoOb *gxcTypes.Memo) (uint64, error) {
 	amountAssets := gxcTypes.AssetAmount{
 		AssetID: gxcTypes.MustParseObjectID("1.3.1"),
 		Amount:  1,
@@ -496,8 +495,7 @@ func (restClient *RestClient) GetRequiredFee(memoOb *gxcTypes.Memo) (float64, er
 	if err != nil {
 		return 0, err
 	}
-	fee, _ := decimal.NewFromInt(int64(fees[0].Amount)).Div(decimal.NewFromInt(100000)).Float64()
-	return fee, nil
+	return fees[0].Amount, nil
 }
 
 func (restClient *RestClient) BuildTransaction(from_address, to_address, symbol string, amount uint64, memoOb *gxcTypes.Memo) (string, error) {
